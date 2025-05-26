@@ -112,10 +112,10 @@ export function SchoolReportConfigProvider({ children }: SchoolReportConfigProvi
         'Ciências',
         'História',
         'Geografia',
-        'Educação Física'
+        'Educação Física',
+        'Inglês'
     ])
     const [inactiveSubjects, setInactiveSubjects] = useState<Matter[]>([
-        'Inglês',
         'Física',
         'Química',
         'Biologia',

@@ -16,6 +16,7 @@ import {
     VscReset
 } from '@/utils/reactIconsImports'
 import { convertToPascalCase } from '@/utils/converterText'
+import { FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa'
 
 import {
     ActiveQuarter,
@@ -24,13 +25,13 @@ import {
 
 import { GenerateImageContext } from '@/contexts/GenerateImageContext'
 import { useSchoolReportConfig } from '@/hooks/useSchoolReportConfig'
-import { useSchoolReport }       from '@/hooks/useSchoolReport'
-import { useSidebar }            from '@/hooks/useSidebar'
-import { useTheme }              from '@/hooks/useTheme'
+import { useSchoolReport } from '@/hooks/useSchoolReport'
+import { useSidebar } from '@/hooks/useSidebar'
+import { useTheme } from '@/hooks/useTheme'
 import { ColorPicker } from '@/components/colorPicker'
-import { InfoIcon }    from '@/components/infoIcon'
-import { Details }     from '@/components/details'
-import { Input }       from '@/components/input'
+import { InfoIcon } from '@/components/infoIcon'
+import { Details } from '@/components/details'
+import { Input } from '@/components/input'
 
 export const Sidebar = () => {
     const { isOpen, toggleSidebar } = useSidebar()
@@ -39,6 +40,8 @@ export const Sidebar = () => {
     const [activeSubjectIndex, setActiveSubjectIndex] = useState(0)
     const [otherSubject, setOtherSubject] = useState('')
     const [switchSubjectButtonDisabled, isSwitchSubjectButtonDisabled] = useState(false)
+    const [showBoletins, setShowBoletins] = useState(false)
+    const [boletins, setBoletins] = useState<any[]>([])
 
     const {
         filesImage,
@@ -163,6 +166,29 @@ export const Sidebar = () => {
             return () => asideContent.removeEventListener('scroll', handleScroll)
         }
     }, [])
+
+    // Carregar boletins do localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('boletins')
+        if (saved) setBoletins(JSON.parse(saved));
+    }, []);
+
+    // Atualizar lista quando um novo boletim for salvo
+    useEffect(() => {
+        const handler = () => {
+            const saved = localStorage.getItem('boletins')
+            if (saved) setBoletins(JSON.parse(saved));
+        };
+        window.addEventListener('boletimSalvo', handler);
+        return () => window.removeEventListener('boletimSalvo', handler);
+    }, []);
+
+    // Função para editar um boletim
+    const handleEditBoletim = (boletim: any) => {
+        // Disparar evento customizado para carregar no formulário principal
+        window.dispatchEvent(new CustomEvent('carregarBoletim', { detail: boletim }));
+        setShowBoletins(false);
+    };
 
     return (
         <aside className={
@@ -435,6 +461,34 @@ export const Sidebar = () => {
                                 </div>
                             </div>
                         </Details>
+
+                        <button
+                            className='w-full hover:bg-shadow-5 hover:dark:bg-shadow-15 flex items-center justify-between gap-2 py-1 px-3 rounded-md transition-[background-color] font-bold text-violet-600 dark:text-violet-300 mb-2'
+                            onClick={() => setShowBoletins(!showBoletins)}
+                        >
+                            Boletins
+                            {showBoletins ? <FaChevronUp className='text-lg' /> : <FaChevronDown className='text-lg' />}
+                        </button>
+                        {showBoletins && (
+                            <div className='bg-shadow-5 dark:bg-shadow-15 rounded-md max-h-48 overflow-y-auto mb-2'>
+                                {boletins.length === 0 ? (
+                                    <div className='px-3 py-2 text-sm text-gray-500'>Nenhum boletim salvo.</div>
+                                ) : (
+                                    boletins.map((boletim, idx) => (
+                                        <div key={idx} className='flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-gray-700 last:border-0'>
+                                            <span className='truncate'>{boletim.nome || boletim.studentName || `Boletim ${idx+1}`}</span>
+                                            <button
+                                                className='ml-2 text-violet-600 dark:text-violet-300 hover:text-green-600 dark:hover:text-green-400 p-1 rounded-md transition-colors'
+                                                title='Editar boletim'
+                                                onClick={() => handleEditBoletim(boletim)}
+                                            >
+                                                <FaEdit />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
 
                         <Details summary='Imagens' containerClassName='max-h-[11.6rem]'>
                             { filesImage.length === 0

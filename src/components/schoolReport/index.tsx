@@ -36,6 +36,7 @@ import { Input } from '@/components/input'
 const inter = Inter({ subsets: ['latin'] })
 
 export const SchoolReport = () => {
+
     const formRef = useRef<FormHandles>(null)
     const mainRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -133,6 +134,27 @@ export const SchoolReport = () => {
                         },
                         studentAcademicRecord: { ...academicRecordData }
                     })
+
+                    // Salvar/atualizar boletim no localStorage
+                    const boletimParaSalvar = {
+                        ...data,
+                        nome: data.student?.name || data.nome || 'Boletim',
+                        // Adicione outros campos relevantes se necessário
+                    };
+                    let boletins = [];
+                    try {
+                        boletins = JSON.parse(localStorage.getItem('boletins') || '[]');
+                    } catch {}
+                    // Atualiza se já existir pelo nome, senão adiciona
+                    const idx = boletins.findIndex(b => b.nome === boletimParaSalvar.nome);
+                    if (idx !== -1) {
+                        boletins[idx] = boletimParaSalvar;
+                    } else {
+                        boletins.push(boletimParaSalvar);
+                    }
+                    localStorage.setItem('boletins', JSON.stringify(boletins));
+                    // Dispara evento para Sidebar atualizar
+                    window.dispatchEvent(new Event('boletimSalvo'));
                 })
                 .catch(error => {
                     Swal.fire({
@@ -171,6 +193,29 @@ export const SchoolReport = () => {
         signatures: { borderColor: schoolReportColors.signatures },
     }
 
+    const calculateAverageGrade = (grades: any) => {
+        const notas = [
+            Number(grades.firstQuarter) || 0,
+            Number(grades.secondQuarter) || 0,
+            Number(grades.thirdQuarter) || 0,
+            Number(grades.fourthQuarter) || 0
+        ];
+        const sum = notas.reduce((acc, val) => acc + val, 0);
+        const avg = sum / 4;
+        return avg.toFixed(1);
+    };
+
+    const calculateTotalAbsences = (absences: any) => {
+        const faltas = [
+            Number(absences.firstQuarter) || 0,
+            Number(absences.secondQuarter) || 0,
+            Number(absences.thirdQuarter) || 0,
+            Number(absences.fourthQuarter) || 0
+        ];
+        const sum = faltas.reduce((acc, val) => acc + val, 0);
+        return sum;
+    };
+
     useEffect(() => {
         switch (subjects.length) {
             case 9:  return setPaddingYTableItems('py-[0.275rem]')
@@ -196,6 +241,30 @@ export const SchoolReport = () => {
 
         return () => window.removeEventListener('resize', handleResize)
     }, [subjects, hasSignatures, handleResizeTimeout])
+
+    useEffect(() => {
+        const handler = (e: any) => {
+            const boletim = e.detail;
+            if (!boletim) return;
+            // Preencher todos os campos do formulário
+            setSchoolReport((prev) => ({
+                ...prev,
+                ...boletim,
+                student: boletim.student || {
+                    name: boletim.nome || '',
+                    number: boletim.student?.number || '',
+                    yearAndClass: boletim.student?.yearAndClass || ''
+                },
+                studentAcademicRecord: boletim.studentAcademicRecord || prev.studentAcademicRecord
+            }));
+            // Se necessário, atualizar imagens associadas
+            if (typeof window.generateImage === 'function') {
+                window.generateImage();
+            }
+        };
+        window.addEventListener('carregarBoletim', handler);
+        return () => window.removeEventListener('carregarBoletim', handler);
+    }, [setSchoolReport]);
 
     return (
         <div ref={containerRef} className='max-w-fit m-auto'>
@@ -499,7 +568,7 @@ export const SchoolReport = () => {
                                                     name='totalAbsences'
                                                     type='text'
                                                     className='w-full text-center decoration-slice'
-                                                    value={matter.totalAbsences}
+                                                    value={calculateTotalAbsences(matter.absences)}
                                                     label={`Total de faltas de ${subject}`}
                                                     labelStyle='sr-only'
                                                     readOnly
@@ -520,6 +589,19 @@ export const SchoolReport = () => {
                                                     />
                                                 }
                                             </td>
+                                            <td className='tableItens' style={styles.border}>
+                                                <Input
+                                                   name='averageGrade'
+                                                   type='text'
+                                                  className='w-full text-center font-bold'
+                                                  value={calculateAverageGrade(matter.grades)}
+                                                  label='Média Final'
+                                                  labelStyle='sr-only'
+                                                   readOnly
+                                                  disabled
+                                                    />
+                                              </td>
+
                                         </tr>
                                     </Scope>
                                 )

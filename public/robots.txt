@@ -1,0 +1,10 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /__tests__
+
+# Host
+Host: https://boletim-escolar-nyctibiusvii.vercel.app
+
+# Sitemaps
+Sitemap: https://boletim-escolar-nyctibiusvii.vercel.app/sitemap.xml

@@ -84,6 +84,7 @@ export interface SchoolReportType {
     academicYear: number
     student:               Student
     studentAcademicRecord: StudentAcademicRecord
+    nome?: string;
 }
 /* Components/ColorPicker */
 type SchoolReportKeys = keyof SchoolReportColors

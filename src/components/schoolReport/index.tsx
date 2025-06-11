@@ -14,7 +14,8 @@ import {
     SchoolReportStyles,
     SchoolReportType,
     StudentAcademicRecord,
-    SubjectSituation
+    SubjectSituation,
+    Student
 } from '@/interfaces/types'
 
 import {
@@ -34,6 +35,16 @@ import { useTheme }              from '@/hooks/useTheme'
 import { Input } from '@/components/input'
 
 const inter = Inter({ subsets: ['latin'] })
+
+interface BoletimSalvo extends SchoolReportType {
+    imageData?: string; // Adicione outras propriedades relevantes se existirem
+}
+
+declare global {
+    interface Window {
+        generateImage: () => Promise<void>; // Assumindo que generateImage retorna uma Promise<void>
+    }
+}
 
 export const SchoolReport = () => {
 
@@ -74,7 +85,7 @@ export const SchoolReport = () => {
     } = useSchoolReport()
 
     const handleFormSubmit: SubmitHandler<SchoolReportType> = data => {
-        let timerInterval: NodeJS.Timer
+        let timerInterval: NodeJS.Timer | undefined;
         setIsMainScreenshot(true)
 
         Swal.fire({
@@ -83,8 +94,15 @@ export const SchoolReport = () => {
             timer: 1000,
             background: swalColors.bg,
             color: swalColors.fg,
-            didOpen: () => Swal.showLoading(),
-            willClose: () => clearInterval(timerInterval)
+            didOpen: () => {
+                Swal.showLoading();
+                timerInterval = setInterval(() => {}, 100); // Atribuindo o intervalo aqui
+            },
+            willClose: () => {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+            }
         })
         .then(result => {
             if (result.dismiss === Swal.DismissReason.timer) {
@@ -129,7 +147,7 @@ export const SchoolReport = () => {
                         teacher: maintainReportCardData.teacher ? data.teacher : DefaultValues.INPUT_TEXT,
                         student: {
                             name:         maintainReportCardData.studentName         ? data.student.name         : DefaultValues.INPUT_TEXT,
-                            number:       maintainReportCardData.studentNumber       ? data.student.number       : DefaultValues.INPUT_NUMBER,
+                            number:       maintainReportCardData.studentNumber       ? data.student.number       : 0,
                             yearAndClass: maintainReportCardData.studentYearAndClass ? data.student.yearAndClass : DefaultValues.INPUT_TEXT
                         },
                         studentAcademicRecord: { ...academicRecordData }
@@ -141,12 +159,12 @@ export const SchoolReport = () => {
                         nome: data.student?.name || data.nome || 'Boletim',
                         // Adicione outros campos relevantes se necessário
                     };
-                    let boletins = [];
+                    let boletins: BoletimSalvo[] = [];
                     try {
                         boletins = JSON.parse(localStorage.getItem('boletins') || '[]');
                     } catch {}
                     // Atualiza se já existir pelo nome, senão adiciona
-                    const idx = boletins.findIndex(b => b.nome === boletimParaSalvar.nome);
+                    const idx = boletins.findIndex((b: BoletimSalvo) => b.nome === boletimParaSalvar.nome);
                     if (idx !== -1) {
                         boletins[idx] = boletimParaSalvar;
                     } else {
@@ -243,28 +261,35 @@ export const SchoolReport = () => {
     }, [subjects, hasSignatures, handleResizeTimeout])
 
     useEffect(() => {
-        const handler = (e: any) => {
+        const handler = (e: CustomEvent<SchoolReportType>) => {
             const boletim = e.detail;
             if (!boletim) return;
+
             // Preencher todos os campos do formulário
-            setSchoolReport((prev) => ({
-                ...prev,
-                ...boletim,
-                student: boletim.student || {
-                    name: boletim.nome || '',
-                    number: boletim.student?.number || '',
-                    yearAndClass: boletim.student?.yearAndClass || ''
-                },
-                studentAcademicRecord: boletim.studentAcademicRecord || prev.studentAcademicRecord
-            }));
+            const updatedStudent: Student = {
+                name: boletim.student?.name || schoolReport.student.name || '',
+                number: boletim.student?.number || schoolReport.student.number || 0,
+                yearAndClass: boletim.student?.yearAndClass || schoolReport.student.yearAndClass || ''
+            };
+
+            const updatedStudentAcademicRecord: StudentAcademicRecord = boletim.studentAcademicRecord || schoolReport.studentAcademicRecord;
+
+            setSchoolReport({
+                school: boletim.school || schoolReport.school,
+                teacher: boletim.teacher || schoolReport.teacher,
+                academicYear: boletim.academicYear || schoolReport.academicYear,
+                student: updatedStudent,
+                studentAcademicRecord: updatedStudentAcademicRecord,
+                nome: boletim.nome || schoolReport.nome // 'nome' é opcional e diretamente na interface SchoolReportType
+            });
             // Se necessário, atualizar imagens associadas
             if (typeof window.generateImage === 'function') {
                 window.generateImage();
             }
         };
-        window.addEventListener('carregarBoletim', handler);
-        return () => window.removeEventListener('carregarBoletim', handler);
-    }, [setSchoolReport]);
+        window.addEventListener('carregarBoletim', handler as EventListener);
+        return () => window.removeEventListener('carregarBoletim', handler as EventListener);
+    }, [schoolReport, setSchoolReport]);
 
     return (
         <div ref={containerRef} className='max-w-fit m-auto'>

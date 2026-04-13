@@ -34,7 +34,8 @@ export const createSession = async (userId: string, res: NextApiResponse) => {
     }
   })
 
-  const cookie = `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_DAYS * 24 * 60 * 60}`
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
+  const cookie = `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_DAYS * 24 * 60 * 60}${secure}`
   res.setHeader('Set-Cookie', cookie)
 }
 
@@ -43,7 +44,8 @@ export const clearSession = async (req: NextApiRequest, res: NextApiResponse) =>
   if (token) {
     await prisma.session.deleteMany({ where: { token } })
   }
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`)
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`)
 }
 
 export const getSessionUser = async (req: NextApiRequest) => {

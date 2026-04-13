@@ -13,6 +13,7 @@
 		"url": "https://github.com/NyctibiusVII/BoletimEscolar/issues"
 	},
 	"scripts": {
+		"postinstall": "prisma generate",
 		"dev": "next dev",
 		"build": "next build",
 		"postbuild": "next-sitemap",

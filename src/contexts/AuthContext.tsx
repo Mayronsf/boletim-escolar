@@ -52,6 +52,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [])
 
+  const parseApiJson = async (response: Response) => {
+    const text = await response.text()
+    if (!text) return {}
+    try {
+      return JSON.parse(text) as { error?: string; user?: AuthUser }
+    } catch {
+      return {
+        error: `Resposta inválida do servidor (${response.status}).`
+      }
+    }
+  }
+
   const login = useCallback(async (email: string, password: string) => {
     try {
       const response = await fetch('/api/auth/login', {
@@ -59,9 +71,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       })
-      const data = await response.json()
+      const data = await parseApiJson(response)
       if (!response.ok) return { ok: false, error: data.error || 'Falha ao entrar.' }
-      setUser(data.user)
+      if (data.user) setUser(data.user)
       return { ok: true }
     } catch {
       return { ok: false, error: 'Erro de conexão ao fazer login.' }
@@ -75,9 +87,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      const data = await response.json()
+      const data = await parseApiJson(response)
       if (!response.ok) return { ok: false, error: data.error || 'Falha ao cadastrar.' }
-      setUser(data.user)
+      if (data.user) setUser(data.user)
       return { ok: true }
     } catch {
       return { ok: false, error: 'Erro de conexão ao criar conta.' }

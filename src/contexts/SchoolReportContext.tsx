@@ -54,6 +54,7 @@ export function SchoolReportProvider({ children }: SchoolReportProviderProps) {
     } = useSchoolReportConfig()
 
     const noteWeight = Object.values(activeQuarter).filter(Boolean).length
+    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
     const studentAcademicRecord = () => {
         const newStudentAcademicRecord: StudentAcademicRecord = {}
@@ -126,6 +127,7 @@ export function SchoolReportProvider({ children }: SchoolReportProviderProps) {
         const sumGradesByActiveQuarter = Object.keys(activeQuarter).reduce((acc, quarter, index) => {
             return activeQuarter[quarter as keyof typeof activeQuarter] ? acc + gradesByQuarter[index] : acc
         }, 0)
+        if (noteWeight <= 0) return 0
         return sumGradesByActiveQuarter / noteWeight
     }
     const calculateOfTotalAbsences = (absences: Bimester) => {
@@ -148,13 +150,18 @@ export function SchoolReportProvider({ children }: SchoolReportProviderProps) {
         return concept
     }
     const calculateFinalResult = (average: number, totalClasses: number, newTotalAbsences: number) => {
-        const presencePercentage = totalClasses === 0 ? 0 : ((totalClasses - newTotalAbsences) / totalClasses) * 100
+        const safeMinimumPassingGrade = clamp(minimumPassingGrade, 7, 10)
+        const safeMinimumRecoveryGrade = clamp(minimumRecoveryGrade, 1, safeMinimumPassingGrade - 1)
+        const safeMinimumAttendanceToPass = clamp(minimumAttendancePercentageToPass, 75, 100)
+        const safeTotalClasses = Math.max(1, totalClasses)
+        const presencePercentage = ((safeTotalClasses - newTotalAbsences) / safeTotalClasses) * 100
         const finalResult =
-            average >= minimumPassingGrade
-                ? SubjectSituation.APPROVED
-                : presencePercentage < minimumAttendancePercentageToPass
-                    ? SubjectSituation.FAILED_FOR_ABSENCE
-                    : average >= minimumRecoveryGrade
+            // Reprovação por falta deve ter prioridade sobre nota.
+            presencePercentage < safeMinimumAttendanceToPass
+                ? SubjectSituation.FAILED_FOR_ABSENCE
+                : average >= safeMinimumPassingGrade
+                    ? SubjectSituation.APPROVED
+                    : average >= safeMinimumRecoveryGrade
                         ? SubjectSituation.RECOVERY
                         : SubjectSituation.DISAPPROVED
         return finalResult

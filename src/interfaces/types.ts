@@ -46,6 +46,7 @@ export type Matter =
   | 'Filosofia'
   | 'Sociologia'
   | 'Inglês'
+  | 'Espanhol'
   | 'Educação Física'
   | 'Artes'
   | 'Ensino Religioso'
@@ -163,14 +164,14 @@ export enum DefaultValues {
     INPUT_NUMBER = 0,
     MINIMUM_PASSING_GRADE                 = 6,
     MINIMUM_RECOVERY_GRADE                = 4,
-    MINIMUM_ATTENDANCE_PERCENTAGE_TO_PASS = 25,
+    MINIMUM_ATTENDANCE_PERCENTAGE_TO_PASS = 75,
     KEEP_VALUES          = '{"school":true,"teacher":true,"studentName":false,"studentNumber":false,"studentYearAndClass":false,"academicRecordGrades":false,"academicRecordAbsences":false,"academicRecordTotalClasses":true}',
     BIMESTER             = '{"firstQuarter":0,"secondQuarter":0,"thirdQuarter":0,"fourthQuarter":0}',
     ACTIVE_QUARTER       = '{"firstQuarter":true,"secondQuarter":true,"thirdQuarter":true,"fourthQuarter":true}',
-    ACTIVE_SUBJECTS      = '["Português","Matemática","Artes","Ciências","História","Geografia","Educação Física"]',
-    INACTIVE_SUBJECTS    = '["Inglês","Física","Química","Biologia","Filosofia","Sociologia","Ensino Religioso"]',
-    MATTER               = '["Português","Matemática","Artes","Ciências","História","Geografia","Educação Física","Inglês","Física","Química","Biologia","Filosofia","Sociologia","Ensino Religioso"]',
-    SCHOOL_REPORT_COLORS = '{"card":"#ffffff","border":"#030712","clippingBorder":"#dc2626","signatures":"#030712","text":"#030712","enoughGrade":"#22c55e","insufficientGrade":"#dc2626"}',
+    ACTIVE_SUBJECTS      = '["Português","Matemática","Artes","Ciências","História","Geografia","Educação Física","Inglês","Espanhol"]',
+    INACTIVE_SUBJECTS    = '["Física","Química","Biologia","Filosofia","Sociologia","Ensino Religioso"]',
+    MATTER               = '["Português","Matemática","Artes","Ciências","História","Geografia","Educação Física","Inglês","Espanhol","Física","Química","Biologia","Filosofia","Sociologia","Ensino Religioso"]',
+    SCHOOL_REPORT_COLORS = '{"card":"#0a0a0a","border":"#f5f5f5","clippingBorder":"#737373","signatures":"#f5f5f5","text":"#f5f5f5","enoughGrade":"#f5f5f5","insufficientGrade":"#a3a3a3"}',
     FILES_IMAGE          = '[]',
     TOTAL_CLASSES  = 56,
     TOTAL_ABSENCES = 0,

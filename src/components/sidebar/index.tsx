@@ -16,7 +16,7 @@ import {
     VscReset
 } from '@/utils/reactIconsImports'
 import { convertToPascalCase } from '@/utils/converterText'
-import { FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa'
+import { FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa'
 
 import {
     ActiveQuarter,
@@ -28,6 +28,7 @@ import { useSchoolReportConfig } from '@/hooks/useSchoolReportConfig'
 import { useSchoolReport } from '@/hooks/useSchoolReport'
 import { useSidebar } from '@/hooks/useSidebar'
 import { useTheme } from '@/hooks/useTheme'
+import { useAuth } from '@/hooks/useAuth'
 import { ColorPicker } from '@/components/colorPicker'
 import { InfoIcon } from '@/components/infoIcon'
 import { Details } from '@/components/details'
@@ -42,6 +43,10 @@ export const Sidebar = () => {
     const [switchSubjectButtonDisabled, isSwitchSubjectButtonDisabled] = useState(false)
     const [showBoletins, setShowBoletins] = useState(false)
     const [boletins, setBoletins] = useState<any[]>([])
+    const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+    const [authEmail, setAuthEmail] = useState('')
+    const [authPassword, setAuthPassword] = useState('')
+    const [authFeedback, setAuthFeedback] = useState('')
 
     const {
         filesImage,
@@ -87,7 +92,20 @@ export const Sidebar = () => {
     } = useSchoolReport()
 
     const { currentTheme, setTheme } = useTheme()
+    const { user, isAuthLoading, login, register, logout } = useAuth()
     const toggleTheme = () => currentTheme === 'dark' ? setTheme('light') : setTheme('dark')
+
+    const handleAuthSubmit = async () => {
+        setAuthFeedback('')
+        const action = authMode === 'login' ? login : register
+        const result = await action(authEmail, authPassword)
+        if (!result.ok) {
+            setAuthFeedback(result.error || 'Não foi possível autenticar.')
+            return
+        }
+        setAuthPassword('')
+        setAuthFeedback(authMode === 'login' ? 'Login realizado com sucesso.' : 'Conta criada com sucesso.')
+    }
 
     const getQuarterKey = (quarterNumber: 1 | 2 | 3 | 4): keyof ActiveQuarter => {
         switch (quarterNumber) {
@@ -189,6 +207,15 @@ export const Sidebar = () => {
         window.dispatchEvent(new CustomEvent('carregarBoletim', { detail: boletim }));
         setShowBoletins(false);
     };
+    const handleDeleteBoletim = (targetIndex: number) => {
+        const saved = localStorage.getItem('boletins')
+        if (!saved) return
+        const parsed = JSON.parse(saved)
+        if (!Array.isArray(parsed)) return
+        const updated = parsed.filter((_, index) => index !== targetIndex)
+        localStorage.setItem('boletins', JSON.stringify(updated))
+        window.dispatchEvent(new Event('boletimSalvo'))
+    }
 
     return (
         <aside className={
@@ -223,6 +250,60 @@ export const Sidebar = () => {
             { isOpen &&
                 <>
                     <div id='aside-content' className='h-[calc(100%-2.75rem)] lg:h-[calc(100%-4.75rem)] rounded-md p-2 pt-0 flex flex-col gap-2 overflow-y-auto scroll-smooth'>
+                        <div className='bg-shadow-5 dark:bg-shadow-15 rounded-md p-2 mb-2'>
+                            {isAuthLoading ? (
+                                <p className='text-sm text-gray-500'>Verificando sessão...</p>
+                            ) : user ? (
+                                <div className='flex flex-col gap-2'>
+                                    <p className='text-sm break-all'>Conta: <strong>{user.email}</strong></p>
+                                    <button
+                                        onClick={() => logout()}
+                                        className='w-full bg-red-500 hover:bg-red-600 text-white rounded-md py-1 transition-colors'
+                                    >
+                                        Sair
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className='flex flex-col gap-2'>
+                                    <div className='grid grid-cols-2 gap-2'>
+                                        <button
+                                            onClick={() => setAuthMode('login')}
+                                            className={`rounded-md py-1 transition-colors ${authMode === 'login' ? 'bg-violet-600 text-white' : 'bg-slate-200 dark:bg-gray-700'}`}
+                                        >
+                                            Login
+                                        </button>
+                                        <button
+                                            onClick={() => setAuthMode('register')}
+                                            className={`rounded-md py-1 transition-colors ${authMode === 'register' ? 'bg-violet-600 text-white' : 'bg-slate-200 dark:bg-gray-700'}`}
+                                        >
+                                            Cadastro
+                                        </button>
+                                    </div>
+                                    <input
+                                        type='email'
+                                        value={authEmail}
+                                        onChange={event => setAuthEmail(event.target.value)}
+                                        placeholder='E-mail'
+                                        className='w-full h-8 px-2 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-600'
+                                    />
+                                    <input
+                                        type='password'
+                                        value={authPassword}
+                                        onChange={event => setAuthPassword(event.target.value)}
+                                        placeholder='Senha (mín. 6)'
+                                        className='w-full h-8 px-2 rounded-md bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-600'
+                                    />
+                                    <button
+                                        onClick={() => handleAuthSubmit()}
+                                        className='w-full bg-violet-600 hover:bg-violet-700 text-white rounded-md py-1 transition-colors'
+                                    >
+                                        {authMode === 'login' ? 'Entrar' : 'Criar conta'}
+                                    </button>
+                                    {authFeedback && <p className='text-xs text-gray-500'>{authFeedback}</p>}
+                                </div>
+                            )}
+                        </div>
+
                         <div className='flex flex-nowrap items-baseline gap-2 lg:justify-between'>
                             <p>Nota de aprovação:</p>
                             <Input
@@ -234,7 +315,7 @@ export const Sidebar = () => {
                                 onChange={event => setMinimumPassingGrade(Number(event.target.value))}
                                 value={minimumPassingGrade}
                                 step='1'
-                                min='1'
+                                min='7'
                                 max='10'
                                 label='Nota miníma para aprovação'
                                 labelStyle='sr-only'
@@ -268,7 +349,7 @@ export const Sidebar = () => {
                                 onChange={event => setMinimumAttendancePercentageToPass(Number(event.target.value))}
                                 value={minimumAttendancePercentageToPass}
                                 step='1'
-                                min='1'
+                                min='75'
                                 max='100'
                                 label='Porcentagem da frequência miníma de aulas'
                                 labelStyle='sr-only'
@@ -463,7 +544,7 @@ export const Sidebar = () => {
                         </Details>
 
                         <button
-                            className='w-full hover:bg-shadow-5 hover:dark:bg-shadow-15 flex items-center justify-between gap-2 py-1 px-3 rounded-md transition-[background-color] font-bold text-violet-600 dark:text-violet-300 mb-2'
+                            className='w-full hover:bg-shadow-5 hover:dark:bg-shadow-15 flex items-center justify-between gap-2 py-1 px-3 rounded-md transition-[background-color] font-bold text-black dark:text-white mb-2'
                             onClick={() => setShowBoletins(!showBoletins)}
                         >
                             Boletins
@@ -478,11 +559,18 @@ export const Sidebar = () => {
                                         <div key={idx} className='flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-gray-700 last:border-0'>
                                             <span className='truncate'>{boletim.nome || boletim.studentName || `Boletim ${idx+1}`}</span>
                                             <button
-                                                className='ml-2 text-violet-600 dark:text-violet-300 hover:text-green-600 dark:hover:text-green-400 p-1 rounded-md transition-colors'
+                                                className='ml-2 text-black dark:text-white hover:text-slate-500 p-1 rounded-md transition-colors'
                                                 title='Editar boletim'
                                                 onClick={() => handleEditBoletim(boletim)}
                                             >
                                                 <FaEdit />
+                                            </button>
+                                            <button
+                                                className='ml-1 text-black dark:text-white hover:text-slate-500 p-1 rounded-md transition-colors'
+                                                title='Excluir boletim'
+                                                onClick={() => handleDeleteBoletim(idx)}
+                                            >
+                                                <FaTrash />
                                             </button>
                                         </div>
                                     ))

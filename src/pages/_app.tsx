@@ -2,6 +2,7 @@ import type { AppProps } from 'next/app'
 import { ThemeProvider } from 'next-themes'
 
 import { LoadingProvider }            from '@/contexts/LoadingContext'
+import { AuthProvider }               from '@/contexts/AuthContext'
 import { SidebarProvider }            from '@/contexts/SidebarContext'
 import { SchoolReportConfigProvider } from '@/contexts/SchoolReportConfigContext'
 import { SchoolReportProvider }       from '@/contexts/SchoolReportContext'
@@ -16,6 +17,7 @@ import '@/styles/globals.css'
 const Providers = BuildProviderTree([
     [ThemeProvider, { attribute: 'class' }],
     [LoadingProvider],
+    [AuthProvider],
     [SidebarProvider],
     [SchoolReportConfigProvider],
     [SchoolReportProvider],
@@ -31,6 +33,9 @@ export default function App({ Component, pageProps }: AppProps) {
                 <title>Boletim Escolar</title>
             </Head>
             <Component {...pageProps} />
+            <footer className='fixed bottom-0 left-0 right-0 z-30 text-center text-xs py-2 bg-black text-white/80 border-t border-white/20'>
+                tricode solutions direito reservados
+            </footer>
             <CookieConcent />
         </Providers>
     )

@@ -50,9 +50,9 @@ export const SchoolReportConfigContext = createContext({} as SchoolReportConfigC
 export function SchoolReportConfigProvider({ children }: SchoolReportConfigProviderProps) {
     const [recalculateValues, setRecalculateValues] = useState(0)
 
-    const [minimumPassingGrade,                             setMinimumPassingGrade] = useState(6)
-    const [minimumRecoveryGrade,                           setMinimumRecoveryGrade] = useState(4)
-    const [minimumAttendancePercentageToPass, setMinimumAttendancePercentageToPass] = useState(25)
+    const [minimumPassingGrade,                             setMinimumPassingGrade] = useState(7)
+    const [minimumRecoveryGrade,                           setMinimumRecoveryGrade] = useState(5)
+    const [minimumAttendancePercentageToPass, setMinimumAttendancePercentageToPass] = useState(75)
 
     const [hasResponsibleTeacherName, setHasResponsibleTeacherName] = useState(true)
     const [hasSignatures,                         setHasSignatures] = useState(true)
@@ -72,13 +72,13 @@ export function SchoolReportConfigProvider({ children }: SchoolReportConfigProvi
     })
 
     const schoolReportColorsStartup: SchoolReportColors = {
-        card:              '#ffffff',
-        border:            '#030712',
-        clippingBorder:    '#dc2626',
-        signatures:        '#030712',
-        text:              '#030712',
-        enoughGrade:       '#22c55e',
-        insufficientGrade: '#dc2626'
+        card:              '#0a0a0a',
+        border:            '#f5f5f5',
+        clippingBorder:    '#737373',
+        signatures:        '#f5f5f5',
+        text:              '#f5f5f5',
+        enoughGrade:       '#f5f5f5',
+        insufficientGrade: '#a3a3a3'
     }
     const [schoolReportColors, setSchoolReportColors] = useState<SchoolReportColors>(schoolReportColorsStartup)
 
@@ -113,7 +113,8 @@ export function SchoolReportConfigProvider({ children }: SchoolReportConfigProvi
         'História',
         'Geografia',
         'Educação Física',
-        'Inglês'
+        'Inglês',
+        'Espanhol'
     ])
     const [inactiveSubjects, setInactiveSubjects] = useState<Matter[]>([
         'Física',

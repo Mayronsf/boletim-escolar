@@ -2,7 +2,9 @@ import {
     createContext,
     ReactNode,
     useContext,
-    useEffect
+    useEffect,
+    useRef,
+    useState
 } from 'react'
 
 import {
@@ -29,6 +31,7 @@ import { useSchoolReportConfig } from '@/hooks/useSchoolReportConfig'
 import { useSchoolReport }       from '@/hooks/useSchoolReport'
 import { useLoading }            from '@/hooks/useLoading'
 import { useSidebar }            from '@/hooks/useSidebar'
+import { useAuth }               from '@/hooks/useAuth'
 
 interface LocalStorageContextData {
     getItemsLocalStorage: () => GetLocalStorage
@@ -38,6 +41,11 @@ interface LocalStorageProviderProps { children: ReactNode }
 export const LocalStorageContext = createContext({} as LocalStorageContextData)
 
 export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
+    const { user } = useAuth()
+    const isHydratingCloudRef = useRef(false)
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const [boletinsVersion, setBoletinsVersion] = useState(0)
+
     const { isOpen, setIsOpen } = useSidebar()
     const { isLoading, setIsLoading } = useLoading()
     const { filesImage, setFilesImage } = useContext(GenerateImageContext)
@@ -75,10 +83,33 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
 
     const getItemsLocalStorage = () => {
         const getLocalStorage: GetLocalStorage = {}
+        const sanitizeSetting = (value: number, min: number, max: number, fallback: number) => {
+            if (Number.isNaN(value) || !Number.isFinite(value)) return fallback
+            if (value < min || value > max) return fallback
+            return value
+        }
+        const minimumPassingGradeValue = localStorage.getItem('minimum_passing_grade') ? Number(localStorage.getItem('minimum_passing_grade')) : DefaultValues.MINIMUM_PASSING_GRADE
+        const minimumRecoveryGradeValue = localStorage.getItem('minimum_recovery_grade') ? Number(localStorage.getItem('minimum_recovery_grade')) : DefaultValues.MINIMUM_RECOVERY_GRADE
+        const minimumAttendanceToPassValue = localStorage.getItem('minimum_attendance_percentage_to_pass') ? Number(localStorage.getItem('minimum_attendance_percentage_to_pass')) : DefaultValues.MINIMUM_ATTENDANCE_PERCENTAGE_TO_PASS
 
-        getLocalStorage.minimum_passing_grade                 = localStorage.getItem('minimum_passing_grade')                 ? Number(localStorage.getItem('minimum_passing_grade'))                 : DefaultValues.MINIMUM_PASSING_GRADE
-        getLocalStorage.minimum_recovery_grade                = localStorage.getItem('minimum_recovery_grade')                ? Number(localStorage.getItem('minimum_recovery_grade'))                : DefaultValues.MINIMUM_RECOVERY_GRADE
-        getLocalStorage.minimum_attendance_percentage_to_pass = localStorage.getItem('minimum_attendance_percentage_to_pass') ? Number(localStorage.getItem('minimum_attendance_percentage_to_pass')) : DefaultValues.MINIMUM_ATTENDANCE_PERCENTAGE_TO_PASS
+        getLocalStorage.minimum_passing_grade = sanitizeSetting(
+            minimumPassingGradeValue,
+            7,
+            10,
+            DefaultValues.MINIMUM_PASSING_GRADE
+        )
+        getLocalStorage.minimum_recovery_grade = sanitizeSetting(
+            minimumRecoveryGradeValue,
+            1,
+            10,
+            DefaultValues.MINIMUM_RECOVERY_GRADE
+        )
+        getLocalStorage.minimum_attendance_percentage_to_pass = sanitizeSetting(
+            minimumAttendanceToPassValue,
+            75,
+            100,
+            DefaultValues.MINIMUM_ATTENDANCE_PERCENTAGE_TO_PASS
+        )
 
         getLocalStorage.has_responsible_teacher_name = localStorage.getItem('has_responsible_teacher_name') === 'false' ? false : true
         getLocalStorage.has_signatures               = localStorage.getItem('has_signatures')               === 'false' ? false : true
@@ -281,6 +312,120 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
         inactiveSubjects,
         schoolReportColors,
         isOpen
+    ])
+
+    useEffect(() => {
+        const handleBoletimSaved = () => setBoletinsVersion(value => value + 1)
+        window.addEventListener('boletimSalvo', handleBoletimSaved)
+        return () => window.removeEventListener('boletimSalvo', handleBoletimSaved)
+    }, [])
+
+    useEffect(() => {
+        if (!user) return
+
+        const loadFromCloud = async () => {
+            try {
+                isHydratingCloudRef.current = true
+                const response = await fetch('/api/profile/report')
+                if (!response.ok) return
+                const payload = await response.json()
+                const data = payload?.data as any
+                if (!data) return
+
+                if (data.schoolReport) setSchoolReport(data.schoolReport)
+                if (data.minimumPassingGrade !== undefined) setMinimumPassingGrade(Math.min(10, Math.max(7, Number(data.minimumPassingGrade) || DefaultValues.MINIMUM_PASSING_GRADE)))
+                if (data.minimumRecoveryGrade !== undefined) setMinimumRecoveryGrade(Math.min(9, Math.max(1, Number(data.minimumRecoveryGrade) || DefaultValues.MINIMUM_RECOVERY_GRADE)))
+                if (data.minimumAttendancePercentageToPass !== undefined) setMinimumAttendancePercentageToPass(Math.min(100, Math.max(75, Number(data.minimumAttendancePercentageToPass) || DefaultValues.MINIMUM_ATTENDANCE_PERCENTAGE_TO_PASS)))
+                if (data.hasResponsibleTeacherName !== undefined) setHasResponsibleTeacherName(data.hasResponsibleTeacherName)
+                if (data.hasSignatures !== undefined) setHasSignatures(data.hasSignatures)
+                if (data.hasConcept !== undefined) setHasConcept(data.hasConcept)
+                if (data.hasConceptValues !== undefined) setHasConceptValues(data.hasConceptValues)
+                if (data.hasFinalResultValues !== undefined) setHasFinalResultValues(data.hasFinalResultValues)
+                if (data.isOpen !== undefined) setIsOpen(data.isOpen)
+                if (data.maintainReportCardData) setMaintainReportCardData(data.maintainReportCardData)
+                if (data.activeQuarter) setActiveQuarter(data.activeQuarter)
+                if (data.filesImage) setFilesImage(data.filesImage)
+                if (data.subjects) setSubjects(data.subjects)
+                if (data.inactiveSubjects) setInactiveSubjects(data.inactiveSubjects)
+                if (data.schoolReportColors) setSchoolReportColors(data.schoolReportColors)
+                if (data.boletins) {
+                    localStorage.setItem('boletins', JSON.stringify(data.boletins))
+                    window.dispatchEvent(new Event('boletimSalvo'))
+                }
+            } catch {
+                return
+            } finally {
+                setTimeout(() => {
+                    isHydratingCloudRef.current = false
+                }, 250)
+            }
+        }
+
+        loadFromCloud()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id])
+
+    useEffect(() => {
+        if (!user || isLoading || isHydratingCloudRef.current) return
+
+        const cloudData = {
+            schoolReport,
+            minimumPassingGrade,
+            minimumRecoveryGrade,
+            minimumAttendancePercentageToPass,
+            hasResponsibleTeacherName,
+            hasSignatures,
+            hasConcept,
+            hasConceptValues,
+            hasFinalResultValues,
+            isOpen,
+            maintainReportCardData,
+            activeQuarter,
+            filesImage,
+            subjects,
+            inactiveSubjects,
+            schoolReportColors,
+            boletins: (() => {
+                try {
+                    return JSON.parse(localStorage.getItem('boletins') || '[]')
+                } catch {
+                    return []
+                }
+            })()
+        }
+
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = setTimeout(() => {
+            fetch('/api/profile/report', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: cloudData })
+            }).catch(() => null)
+        }, 800)
+
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        }
+    }, [
+        user,
+        isLoading,
+        schoolReport,
+        minimumPassingGrade,
+        minimumRecoveryGrade,
+        minimumAttendancePercentageToPass,
+        hasResponsibleTeacherName,
+        hasSignatures,
+        hasConcept,
+        hasConceptValues,
+        hasFinalResultValues,
+        isOpen,
+        maintainReportCardData,
+        activeQuarter,
+        filesImage,
+        subjects,
+        inactiveSubjects,
+        schoolReportColors,
+        boletinsVersion
     ])
 
     return(

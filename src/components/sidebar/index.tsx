@@ -97,8 +97,15 @@ export const Sidebar = () => {
 
     const handleAuthSubmit = async () => {
         setAuthFeedback('')
-        const action = authMode === 'login' ? login : register
-        const result = await action(authEmail, authPassword)
+        const result = authMode === 'login'
+            ? await login(authEmail, authPassword)
+            : await register({
+                email: authEmail,
+                schoolName: '',
+                secretaryName: '',
+                password: authPassword,
+                confirmPassword: authPassword
+            })
         if (!result.ok) {
             setAuthFeedback(result.error || 'Não foi possível autenticar.')
             return

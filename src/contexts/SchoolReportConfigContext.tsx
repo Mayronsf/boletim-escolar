@@ -72,13 +72,13 @@ export function SchoolReportConfigProvider({ children }: SchoolReportConfigProvi
     })
 
     const schoolReportColorsStartup: SchoolReportColors = {
-        card:              '#0a0a0a',
-        border:            '#f5f5f5',
-        clippingBorder:    '#737373',
-        signatures:        '#f5f5f5',
-        text:              '#f5f5f5',
-        enoughGrade:       '#f5f5f5',
-        insufficientGrade: '#a3a3a3'
+        card:              '#ffffff',
+        border:            '#171717',
+        clippingBorder:    '#525252',
+        signatures:        '#171717',
+        text:              '#171717',
+        enoughGrade:       '#171717',
+        insufficientGrade: '#737373'
     }
     const [schoolReportColors, setSchoolReportColors] = useState<SchoolReportColors>(schoolReportColorsStartup)
 

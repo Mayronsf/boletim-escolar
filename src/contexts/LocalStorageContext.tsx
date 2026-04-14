@@ -123,7 +123,13 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
         getLocalStorage.files_image          = localStorage.getItem('files_image')          ? JSON.parse(localStorage.getItem('files_image')          as string) : JSON.parse(DefaultValues.FILES_IMAGE)
         getLocalStorage.active_subjects      = localStorage.getItem('active_subjects')      ? JSON.parse(localStorage.getItem('active_subjects')      as string) : JSON.parse(DefaultValues.ACTIVE_SUBJECTS)
         getLocalStorage.inactive_subjects    = localStorage.getItem('inactive_subjects')    ? JSON.parse(localStorage.getItem('inactive_subjects')    as string) : JSON.parse(DefaultValues.INACTIVE_SUBJECTS)
-        getLocalStorage.school_report_colors = localStorage.getItem('school_report_colors') ? JSON.parse(localStorage.getItem('school_report_colors') as string) : JSON.parse(DefaultValues.SCHOOL_REPORT_COLORS)
+        let reportColors = localStorage.getItem('school_report_colors')
+            ? JSON.parse(localStorage.getItem('school_report_colors') as string)
+            : JSON.parse(DefaultValues.SCHOOL_REPORT_COLORS)
+        if (reportColors?.card === '#0a0a0a') {
+            reportColors = JSON.parse(DefaultValues.SCHOOL_REPORT_COLORS)
+        }
+        getLocalStorage.school_report_colors = reportColors
 
         const keepValues     = getLocalStorage.keep_values     as MaintainReportCardData
         const activeSubjects = getLocalStorage.active_subjects as Matter[]
@@ -347,7 +353,14 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
                 if (data.filesImage) setFilesImage(data.filesImage)
                 if (data.subjects) setSubjects(data.subjects)
                 if (data.inactiveSubjects) setInactiveSubjects(data.inactiveSubjects)
-                if (data.schoolReportColors) setSchoolReportColors(data.schoolReportColors)
+                if (data.schoolReportColors) {
+                    const fromCloud = data.schoolReportColors
+                    const normalized =
+                        fromCloud?.card === '#0a0a0a'
+                            ? JSON.parse(DefaultValues.SCHOOL_REPORT_COLORS)
+                            : fromCloud
+                    if (isSchoolReportColors(normalized)) setSchoolReportColors(normalized)
+                }
                 if (data.boletins) {
                     localStorage.setItem('boletins', JSON.stringify(data.boletins))
                     window.dispatchEvent(new Event('boletimSalvo'))

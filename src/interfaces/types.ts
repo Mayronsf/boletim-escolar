@@ -171,7 +171,7 @@ export enum DefaultValues {
     ACTIVE_SUBJECTS      = '["Português","Matemática","Artes","Ciências","História","Geografia","Educação Física","Inglês","Espanhol"]',
     INACTIVE_SUBJECTS    = '["Física","Química","Biologia","Filosofia","Sociologia","Ensino Religioso"]',
     MATTER               = '["Português","Matemática","Artes","Ciências","História","Geografia","Educação Física","Inglês","Espanhol","Física","Química","Biologia","Filosofia","Sociologia","Ensino Religioso"]',
-    SCHOOL_REPORT_COLORS = '{"card":"#0a0a0a","border":"#f5f5f5","clippingBorder":"#737373","signatures":"#f5f5f5","text":"#f5f5f5","enoughGrade":"#f5f5f5","insufficientGrade":"#a3a3a3"}',
+    SCHOOL_REPORT_COLORS = '{"card":"#ffffff","border":"#171717","clippingBorder":"#525252","signatures":"#171717","text":"#171717","enoughGrade":"#171717","insufficientGrade":"#737373"}',
     FILES_IMAGE          = '[]',
     TOTAL_CLASSES  = 56,
     TOTAL_ABSENCES = 0,

@@ -8,6 +8,11 @@ import {
 } from 'react'
 
 import {
+    ensureAcademicRecords,
+    filterInactiveSubjects,
+    mergeDefaultActiveSubjects
+} from '@/utils/defaultSubjects'
+import {
     isActiveQuarter,
     isFilesImage,
     isMaintainReportCardData,
@@ -121,8 +126,16 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
         getLocalStorage.keep_values          = localStorage.getItem('keep_values')          ? JSON.parse(localStorage.getItem('keep_values')          as string) : JSON.parse(DefaultValues.KEEP_VALUES)
         getLocalStorage.active_quarter       = localStorage.getItem('active_quarter')       ? JSON.parse(localStorage.getItem('active_quarter')       as string) : JSON.parse(DefaultValues.ACTIVE_QUARTER)
         getLocalStorage.files_image          = localStorage.getItem('files_image')          ? JSON.parse(localStorage.getItem('files_image')          as string) : JSON.parse(DefaultValues.FILES_IMAGE)
-        getLocalStorage.active_subjects      = localStorage.getItem('active_subjects')      ? JSON.parse(localStorage.getItem('active_subjects')      as string) : JSON.parse(DefaultValues.ACTIVE_SUBJECTS)
-        getLocalStorage.inactive_subjects    = localStorage.getItem('inactive_subjects')    ? JSON.parse(localStorage.getItem('inactive_subjects')    as string) : JSON.parse(DefaultValues.INACTIVE_SUBJECTS)
+        const storedActiveSubjects = localStorage.getItem('active_subjects')
+            ? JSON.parse(localStorage.getItem('active_subjects') as string) as Matter[]
+            : JSON.parse(DefaultValues.ACTIVE_SUBJECTS) as Matter[]
+        const mergedActiveSubjects = mergeDefaultActiveSubjects(storedActiveSubjects)
+        getLocalStorage.active_subjects = mergedActiveSubjects
+
+        const storedInactiveSubjects = localStorage.getItem('inactive_subjects')
+            ? JSON.parse(localStorage.getItem('inactive_subjects') as string) as Matter[]
+            : JSON.parse(DefaultValues.INACTIVE_SUBJECTS) as Matter[]
+        getLocalStorage.inactive_subjects = filterInactiveSubjects(storedInactiveSubjects, mergedActiveSubjects)
         let reportColors = localStorage.getItem('school_report_colors')
             ? JSON.parse(localStorage.getItem('school_report_colors') as string)
             : JSON.parse(DefaultValues.SCHOOL_REPORT_COLORS)
@@ -175,6 +188,7 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
     /* Recover values from LocalStorage */
     useEffect(() => {
         const subjectsLocalStorage = getItemsLocalStorage().active_subjects as string[]
+        const defaultBimester = JSON.parse(DefaultValues.BIMESTER) as Bimester
         const academicRecordData = subjectsLocalStorage.reduce((record, subject, index) => {
             const gradesLocalStorage        = getItemsLocalStorage().academic_record_grades         as { [key: number]: Bimester }
             const absencesLocalStorage      = getItemsLocalStorage().academic_record_absences       as { [key: number]: Bimester }
@@ -185,12 +199,12 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
 
             return {
                 ...record, [subject]: {
-                    grades:        gradesLocalStorage[index],
-                    absences:      absencesLocalStorage[index],
-                    totalClasses:  totalClassesLocalStorage[index],
-                    totalAbsences: totalAbsencesLocalStorage[index],
-                    concept:       conceptLocalStorage[index],
-                    finalResult:   finalResultLocalStorage[index]
+                    grades:        gradesLocalStorage[index]        ?? defaultBimester,
+                    absences:      absencesLocalStorage[index]      ?? defaultBimester,
+                    totalClasses:  totalClassesLocalStorage[index]  ?? DefaultValues.TOTAL_CLASSES,
+                    totalAbsences: totalAbsencesLocalStorage[index] ?? DefaultValues.TOTAL_ABSENCES,
+                    concept:       conceptLocalStorage[index]       ?? (DefaultValues.CONCEPT as Concept),
+                    finalResult:   finalResultLocalStorage[index]   ?? (DefaultValues.FINAL_RESULT as SubjectSituation)
                 }
             }
         }, {} as StudentAcademicRecord)
@@ -221,8 +235,8 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
                 case 'keep_values':          return isMaintainReportCardData(value) && setMaintainReportCardData(value)
                 case 'active_quarter':       return isActiveQuarter(value)          && setActiveQuarter(value)
                 case 'files_image':          return isFilesImage(value)             && setFilesImage(value)
-                case 'active_subjects':      return isSubjects(value)               && setSubjects(value)
-                case 'inactive_subjects':    return isSubjects(value)               && setInactiveSubjects(value)
+                case 'active_subjects':      return isSubjects(value) && setSubjects(mergeDefaultActiveSubjects(value))
+                case 'inactive_subjects':    return isSubjects(value) && setInactiveSubjects(filterInactiveSubjects(value, mergeDefaultActiveSubjects(subjects)))
                 case 'school_report_colors': return isSchoolReportColors(value)     && setSchoolReportColors(value)
             }
         })
@@ -338,7 +352,29 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
                 const data = payload?.data as any
                 if (!data) return
 
-                if (data.schoolReport) setSchoolReport(data.schoolReport)
+                const mergedSubjects = data.subjects
+                    ? mergeDefaultActiveSubjects(data.subjects as Matter[])
+                    : null
+
+                if (mergedSubjects) {
+                    setSubjects(mergedSubjects)
+                    if (data.inactiveSubjects) {
+                        setInactiveSubjects(filterInactiveSubjects(data.inactiveSubjects as Matter[], mergedSubjects))
+                    }
+                } else if (data.inactiveSubjects) {
+                    setInactiveSubjects(filterInactiveSubjects(data.inactiveSubjects as Matter[], subjects))
+                }
+
+                if (data.schoolReport) {
+                    const subjectsForReport = mergedSubjects ?? mergeDefaultActiveSubjects(subjects)
+                    setSchoolReport({
+                        ...data.schoolReport,
+                        studentAcademicRecord: ensureAcademicRecords(
+                            subjectsForReport,
+                            data.schoolReport.studentAcademicRecord ?? {}
+                        )
+                    })
+                }
                 if (data.minimumPassingGrade !== undefined) setMinimumPassingGrade(Math.min(10, Math.max(7, Number(data.minimumPassingGrade) || DefaultValues.MINIMUM_PASSING_GRADE)))
                 if (data.minimumRecoveryGrade !== undefined) setMinimumRecoveryGrade(Math.min(9, Math.max(1, Number(data.minimumRecoveryGrade) || DefaultValues.MINIMUM_RECOVERY_GRADE)))
                 if (data.minimumAttendancePercentageToPass !== undefined) setMinimumAttendancePercentageToPass(Math.min(100, Math.max(75, Number(data.minimumAttendancePercentageToPass) || DefaultValues.MINIMUM_ATTENDANCE_PERCENTAGE_TO_PASS)))
@@ -351,8 +387,6 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
                 if (data.maintainReportCardData) setMaintainReportCardData(data.maintainReportCardData)
                 if (data.activeQuarter) setActiveQuarter(data.activeQuarter)
                 if (data.filesImage) setFilesImage(data.filesImage)
-                if (data.subjects) setSubjects(data.subjects)
-                if (data.inactiveSubjects) setInactiveSubjects(data.inactiveSubjects)
                 if (data.schoolReportColors) {
                     const fromCloud = data.schoolReportColors
                     const normalized =
@@ -362,7 +396,16 @@ export function LocalStorageProvider({ children }: LocalStorageProviderProps) {
                     if (isSchoolReportColors(normalized)) setSchoolReportColors(normalized)
                 }
                 if (data.boletins) {
-                    localStorage.setItem('boletins', JSON.stringify(data.boletins))
+                    const migratedBoletins = Array.isArray(data.boletins)
+                        ? data.boletins.map((boletim: { studentAcademicRecord?: StudentAcademicRecord }) => ({
+                            ...boletim,
+                            studentAcademicRecord: ensureAcademicRecords(
+                                mergedSubjects ?? mergeDefaultActiveSubjects(subjects),
+                                boletim.studentAcademicRecord ?? {}
+                            )
+                        }))
+                        : []
+                    localStorage.setItem('boletins', JSON.stringify(migratedBoletins))
                     window.dispatchEvent(new Event('boletimSalvo'))
                 }
             } catch {

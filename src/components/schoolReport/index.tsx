@@ -33,6 +33,7 @@ import { useSchoolReport }       from '@/hooks/useSchoolReport'
 import { useSwalTheme }          from '@/hooks/useSwalTheme'
 import { useTheme }              from '@/hooks/useTheme'
 import { Input } from '@/components/input'
+import { ensureAcademicRecords } from '@/utils/defaultSubjects'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -272,7 +273,10 @@ export const SchoolReport = () => {
                 yearAndClass: boletim.student?.yearAndClass || schoolReport.student.yearAndClass || ''
             };
 
-            const updatedStudentAcademicRecord: StudentAcademicRecord = boletim.studentAcademicRecord || schoolReport.studentAcademicRecord;
+            const updatedStudentAcademicRecord = ensureAcademicRecords(
+                subjects,
+                boletim.studentAcademicRecord || schoolReport.studentAcademicRecord
+            )
 
             setSchoolReport({
                 school: boletim.school || schoolReport.school,
@@ -289,7 +293,7 @@ export const SchoolReport = () => {
         };
         window.addEventListener('carregarBoletim', handler as EventListener);
         return () => window.removeEventListener('carregarBoletim', handler as EventListener);
-    }, [schoolReport, setSchoolReport]);
+    }, [schoolReport, setSchoolReport, subjects]);
 
     return (
         <div ref={containerRef} className='max-w-fit m-auto'>

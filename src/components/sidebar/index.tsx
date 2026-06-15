@@ -16,6 +16,7 @@ import {
     VscReset
 } from '@/utils/reactIconsImports'
 import { convertToPascalCase } from '@/utils/converterText'
+import { ensureAcademicRecords, mergeDefaultActiveSubjects } from '@/utils/defaultSubjects'
 import { FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa'
 
 import {
@@ -192,17 +193,36 @@ export const Sidebar = () => {
         }
     }, [])
 
+    const migrateBoletins = (parsed: any[]) => {
+        if (!Array.isArray(parsed)) return []
+        return parsed.map(boletim => ({
+            ...boletim,
+            studentAcademicRecord: ensureAcademicRecords(
+                subjects,
+                boletim.studentAcademicRecord ?? {}
+            )
+        }))
+    }
+
     // Carregar boletins do localStorage
     useEffect(() => {
         const saved = localStorage.getItem('boletins')
-        if (saved) setBoletins(JSON.parse(saved));
-    }, []);
+        if (!saved) return
+        const parsed = JSON.parse(saved)
+        const migrated = migrateBoletins(parsed)
+        setBoletins(migrated)
+        if (JSON.stringify(parsed) !== JSON.stringify(migrated)) {
+            localStorage.setItem('boletins', JSON.stringify(migrated))
+        }
+    }, [subjects])
 
     // Atualizar lista quando um novo boletim for salvo
     useEffect(() => {
         const handler = () => {
             const saved = localStorage.getItem('boletins')
-            if (saved) setBoletins(JSON.parse(saved));
+            if (!saved) return
+            const parsed = JSON.parse(saved)
+            setBoletins(migrateBoletins(parsed))
         };
         window.addEventListener('boletimSalvo', handler);
         return () => window.removeEventListener('boletimSalvo', handler);

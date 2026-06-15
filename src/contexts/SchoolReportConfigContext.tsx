@@ -10,6 +10,10 @@ import {
     Matter,
     SchoolReportColors
 } from '@/interfaces/types'
+import {
+    DEFAULT_ACTIVE_SUBJECTS,
+    DEFAULT_INACTIVE_SUBJECTS
+} from '@/utils/defaultSubjects'
 
 export interface SchoolReportConfigContextData {
     subjects:                  Matter[]
@@ -105,25 +109,8 @@ export function SchoolReportConfigProvider({ children }: SchoolReportConfigProvi
         }
     }
 
-    const [subjects, setSubjects] = useState<Matter[]>([
-        'Português',
-        'Matemática',
-        'Artes',
-        'Ciências',
-        'História',
-        'Geografia',
-        'Educação Física',
-        'Inglês',
-        'Espanhol'
-    ])
-    const [inactiveSubjects, setInactiveSubjects] = useState<Matter[]>([
-        'Física',
-        'Química',
-        'Biologia',
-        'Filosofia',
-        'Sociologia',
-        'Ensino Religioso'
-    ])
+    const [subjects, setSubjects] = useState<Matter[]>(DEFAULT_ACTIVE_SUBJECTS)
+    const [inactiveSubjects, setInactiveSubjects] = useState<Matter[]>(DEFAULT_INACTIVE_SUBJECTS)
 
     return(
         <SchoolReportConfigContext.Provider

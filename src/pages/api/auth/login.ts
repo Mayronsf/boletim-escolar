@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '@/lib/prisma'
+import { getDatabaseErrorMessage } from '@/lib/dbErrors'
 import {
   createSession,
   normalizeEmail,
@@ -10,9 +11,9 @@ import {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  if (!process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL || !process.env.DIRECT_URL) {
     return res.status(500).json({
-      error: 'DATABASE_URL não está configurada no servidor (Vercel → Settings → Environment Variables).'
+      error: getDatabaseErrorMessage(null, 'Banco de dados não configurado.')
     })
   }
 
@@ -31,13 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ user: { id: user.id, email: user.email } })
   } catch (err) {
     console.error('[api/auth/login]', err)
-    const msg = err instanceof Error ? err.message : String(err)
-    if (msg.includes('P1001') || msg.includes("Can't reach database") || msg.includes('ECONNREFUSED')) {
-      return res.status(500).json({
-        error:
-          'Não foi possível conectar ao banco. Confira DATABASE_URL e DIRECT_URL na Vercel.'
-      })
-    }
-    return res.status(500).json({ error: 'Erro ao entrar. Tente novamente.' })
+    return res.status(500).json({
+      error: getDatabaseErrorMessage(err, 'Erro ao entrar. Tente novamente.')
+    })
   }
 }

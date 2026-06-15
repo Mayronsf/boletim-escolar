@@ -18,7 +18,11 @@
 		"build": "next build",
 		"postbuild": "next-sitemap",
 		"start": "next start",
-		"lint": "next lint"
+		"lint": "next lint",
+		"db:up": "docker compose up -d",
+		"db:migrate": "prisma migrate deploy",
+		"db:setup": "prisma migrate deploy && prisma generate",
+		"db:restore:supabase": "powershell -ExecutionPolicy Bypass -File ./scripts/restore-to-supabase.ps1"
 	},
 	"dependencies": {
 		"@prisma/client": "^6.8.2",

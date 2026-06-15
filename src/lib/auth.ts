@@ -16,9 +16,14 @@ export const hashPassword = (password: string) => {
 export const verifyPassword = (password: string, storedHash: string) => {
   const [salt, key] = storedHash.split(':')
   if (!salt || !key) return false
-  const hashBuffer = Buffer.from(key, 'hex')
-  const suppliedBuffer = scryptSync(password, salt, 64)
-  return timingSafeEqual(hashBuffer, suppliedBuffer)
+  try {
+    const hashBuffer = Buffer.from(key, 'hex')
+    const suppliedBuffer = scryptSync(password, salt, 64)
+    if (hashBuffer.length !== suppliedBuffer.length) return false
+    return timingSafeEqual(hashBuffer, suppliedBuffer)
+  } catch {
+    return false
+  }
 }
 
 export const createSession = async (userId: string, res: NextApiResponse) => {
